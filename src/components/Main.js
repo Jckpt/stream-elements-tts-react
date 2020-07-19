@@ -1,71 +1,58 @@
 import React, { Component } from 'react';
 import Select from './Select';
 import Input from './Input';
-import Audio from './Audio';
 import AudioPlayer from 'react-h5-audio-player';
 import 'react-h5-audio-player/lib/styles.css';
-import emulator from '../functions/Emulator';
-export class Main extends Component {
-  state = {
-    input: '',
-    select: 'Jan',
-    blobUrl: '',
-  };
-  handleChange = (e) => {
-    this.setState({
-      input: e.target.value,
-    });
-  };
-  handleSelect = (e) => {
-    this.setState({ select: e.target.value });
-  };
-  handleSubmit = (e) => {
-    if (e.which === 13 && !e.shiftKey) {
-      if (this.state.input === '') {
-        e.preventDefault();
-        console.log('empty textarea');
-      } else {
-        console.log('dziala');
-        this.emulator(this.state.select, this.state.input);
-        console.log(this.blobUrl);
-      }
-    }
-  };
-  emulator = async (select, input) => {
-    // wrzucilem ta funkcje bo jak ja importowalem to nie dzialala i nie wiem jak to naprawic
-    let speak = await fetch(`https://api.streamelements.com/kappa/v2/speech?voice=${select}&text=${encodeURIComponent(input.trim())}`);
-    let mp3 = await speak.blob();
 
-    let blobUrl = URL.createObjectURL(mp3);
-    /*     let audio = document.getElementById('audio');
-            audio.pause();
-            audio.load();
-            audio.play(); */
-    console.log(blobUrl);
+export default class Main extends Component {
+  constructor() {
+    super();
+    this.state = {
+      text: '',
+      voice: 'Jan',
+      blobURL: '',
+    };
+  }
+
+  handleChange = ({ target: { value } }) =>
     this.setState({
-      blobUrl: blobUrl,
+      text: value,
+    });
+
+  handleSelect = ({ target: { value } }) => this.setState({ voice: value });
+
+  handleSubmit = (e) => {
+    if (e.which !== 13 && e.shiftKey) return;
+    if (this.state.text === '') e.preventDefault();
+    else this.emulator(this.state.voice, this.state.text);
+  };
+
+  emulator = async (voice, text) => {
+    const mp3 = await (await fetch(this.getLink(voice, text))).blob();
+    const blobURL = URL.createObjectURL(mp3);
+    this.setState({
+      blobURL,
     });
   };
+
+  getLink = (text, voice) => {
+    const base = 'https://api.streamelements.com/kappa/v2/';
+    return `${base}speech?voice=${voice}&text=${encodeURIComponent(text.trim())}`;
+  };
+
   render() {
+    const ttsAudioElement = this.state.blobURL ? <AudioPlayer src={this.state.blobURL} /> : null;
+
     return (
       <div>
         <main>
-          <Input handleSubmit={this.handleSubmit} handleChange={this.handleChange} input={this.state.input} />
+          <Input handleSubmit={this.handleSubmit} handleChange={this.handleChange} text={this.state.text} />
           <br />
           <Select handleSelect={this.handleSelect} />
           <br />
-          <Audio
-            blobUrl={this.state.blobUrl}
-            // nie dziala nwm czemu dlatego
-          />
-          <AudioPlayer
-            src='https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'
-            // src={this.state.blobUrl} zamiast tego ^
-          />
+          {ttsAudioElement}
         </main>
       </div>
     );
   }
 }
-
-export default Main;
